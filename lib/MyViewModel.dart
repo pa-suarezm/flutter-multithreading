@@ -1,9 +1,10 @@
 import 'dart:isolate';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
 class MyViewModel extends ChangeNotifier {
-  static double _maxCnt = 400000000.0; //400_000_000
+  static double _maxCnt = 300000000.0; //300_000_000
 
   static int _timeSeq = 0;
   static int _timeCon = 0;
@@ -20,60 +21,52 @@ class MyViewModel extends ChangeNotifier {
   Future<void> executeSeq() async {
     _timeSeq = 0;
     _cntSeq1 = null;
-    _cntSeq2 = null;
+    _cntSeq2 = 0.0;
     notifyListeners();
 
     //Port to receive the message from the Isolate when execution is done
     var receivePort = new ReceivePort();
 
+    final stopwatch = Stopwatch();
+    stopwatch.start();
+
     //This code must run on an Isolated thread to not interrupt the main thread
     //Nonetheless, the process itself is sequential
-    Isolate.spawn(executeSeqProcess, receivePort.sendPort);
-
+    Isolate.spawn(_meaninglessCounterSeq1, receivePort.sendPort);
     await for (var retMsg in receivePort) {
-      if(retMsg[0] == "seqDone") {
+      //When seq1 is done, seq2 launches
+      if(retMsg[0] == "seq1Done") {
         _cntSeq1 = 1.0;
+        _cntSeq2 = null;
+        notifyListeners();
+        Isolate.spawn(_meaninglessCounterSeq2, receivePort.sendPort);
+      }
+      //This runs after second process is done
+      else if(retMsg[0] == "seq2Done") {
+        stopwatch.stop();
         _cntSeq2 = 1.0;
-        _timeSeq = retMsg[1];
+        _timeSeq = stopwatch.elapsedMilliseconds;
         notifyListeners();
       }
     }
   }
 
-  static void _meaninglessCounterSeq1() {
+  static void _meaninglessCounterSeq1(SendPort port) {
     double aux;
-
+    double ans;
     for(aux = 1.0; aux <= _maxCnt; aux+=1) {
-      _cntSeq1 = aux/_maxCnt;
+      ans = aux/_maxCnt;
     }
-
-    _cntSeq1 = 1.0;
+    port.send(["seq1Done", ans]);
   }
 
-  static void _meaninglessCounterSeq2() {
+  static void _meaninglessCounterSeq2(SendPort port) {
     double aux;
-
+    double ans;
     for(aux = 1.0; aux <= _maxCnt; aux+=1) {
-      _cntSeq2 = aux/_maxCnt;
+      ans = aux/_maxCnt;
     }
-
-    _cntSeq2 = 1.0;
-  }
-
-  //This will be run on a separate thread (but the process itself remains
-  //sequential in that thread
-  static void executeSeqProcess(SendPort port) {
-    final stopwatch = Stopwatch();
-    stopwatch.start();
-
-    _meaninglessCounterSeq1();
-    _meaninglessCounterSeq2();
-
-    int ans = stopwatch.elapsedMilliseconds;
-
-    stopwatch.stop();
-
-    port.send(["seqDone", ans]);
+    port.send(["seq2Done", ans]);
   }
 
   //----------------------------------------------------------------------------
