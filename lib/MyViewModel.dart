@@ -20,8 +20,8 @@ class MyViewModel extends ChangeNotifier {
   //This will be run by the 'Sequential' button
   Future<void> executeSeq() async {
     _timeSeq = 0;
-    _cntSeq1 = null;
-    _cntSeq2 = 0.0;
+    _cntSeq1 = null;    //Progress bar 1 activates
+    _cntSeq2 = 0.0;     //Progress bar 2 resets
     notifyListeners();
 
     //Port to receive the message from the Isolate when execution is done
@@ -36,15 +36,15 @@ class MyViewModel extends ChangeNotifier {
     await for (var retMsg in receivePort) {
       //When seq1 is done, seq2 launches
       if(retMsg[0] == "seq1Done") {
-        _cntSeq1 = 1.0;
-        _cntSeq2 = null;
+        _cntSeq1 = 1.0;   //Progress bar 1 finishes
+        _cntSeq2 = null;  //Progress bar 2 activates
         notifyListeners();
         Isolate.spawn(_meaninglessCounterSeq2, receivePort.sendPort);
       }
       //This runs after second process is done
       else if(retMsg[0] == "seq2Done") {
         stopwatch.stop();
-        _cntSeq2 = 1.0;
+        _cntSeq2 = 1.0;   //Progress bar 2 finishes
         _timeSeq = stopwatch.elapsedMilliseconds;
         notifyListeners();
       }
@@ -75,9 +75,6 @@ class MyViewModel extends ChangeNotifier {
     final stopwatch = Stopwatch();
 
     _timeCon = 0;
-    _cntCon1 = 0.0;
-    _cntCon2 = 0.0;
-
     notifyListeners();
 
     //Port to receive the message from the Isolates when execution is done
@@ -85,12 +82,12 @@ class MyViewModel extends ChangeNotifier {
 
     stopwatch.start();
 
-    _cntCon1 = null;
+    _cntCon1 = null;  //Progress bar 1 activates
     notifyListeners();
     //Runs the code on different threads allowing for concurrency
     Isolate.spawn(_meaninglessCounterCon1, receivePort.sendPort);
 
-    _cntCon2 = null;
+    _cntCon2 = null;  //Progress bar 2 activates
     notifyListeners();
     //Runs the code on different threads allowing for concurrency
     Isolate.spawn(_meaninglessCounterCon2, receivePort.sendPort);
@@ -101,17 +98,17 @@ class MyViewModel extends ChangeNotifier {
     //When the messages form the thread get through and say execution finished
     await for (var retMsg in receivePort) {
       if(retMsg[0] == "con1") {
-        _cntCon1 = 1.0;
+        _cntCon1 = 1.0;     //Progress bar 1 finishes
         notifyListeners();
         con1Finished = true;
       }
       else if(retMsg[0] == "con2") {
-        _cntCon2 = 1.0;
+        _cntCon2 = 1.0;     //Progress bar 2 finishes
         notifyListeners();
         con2Finished = true;
       }
 
-      if(con1Finished && con2Finished) {
+      if(con1Finished && con2Finished) {  //Both processes finished
         stopwatch.stop();
         _timeCon = stopwatch.elapsedMilliseconds;
         notifyListeners();
@@ -123,23 +120,23 @@ class MyViewModel extends ChangeNotifier {
   //Needs to be static for Isolate.spawn to take it
   static void _meaninglessCounterCon1(SendPort port){
     double aux;
-
+    double ans;
     for(aux = 1.0; aux <= _maxCnt; aux+=1) {
-      _cntCon1 = aux/_maxCnt;
+      ans = aux/_maxCnt;
     }
 
-    port.send(["con1", aux]);
+    port.send(["con1", ans]);
   }
 
   //Needs to be static for Isolate.spawn to take it
   static void _meaninglessCounterCon2(SendPort port) {
     double aux;
-
+    double ans;
     for(aux = 1.0; aux <= _maxCnt; aux+=1) {
-      _cntCon2 = aux/_maxCnt;
+      ans = aux/_maxCnt;
     }
 
-    port.send(["con2", aux]);
+    port.send(["con2", ans]);
   }
   //----------------------------------------------------------------------------
 
