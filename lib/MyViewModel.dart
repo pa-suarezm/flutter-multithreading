@@ -28,7 +28,7 @@ class MyViewModel extends ChangeNotifier {
 
     //This code must run on an Isolated thread to not interrupt the main thread
     //Nonetheless, the process itself is sequential
-    Isolate.spawn(executeSeqAfterWait, receivePort.sendPort);
+    Isolate.spawn(executeSeqProcess, receivePort.sendPort);
 
     await for (var retMsg in receivePort) {
       if(retMsg[0] == "seqDone") {
@@ -62,7 +62,7 @@ class MyViewModel extends ChangeNotifier {
 
   //This will be run on a separate thread (but the process itself remains
   //sequential in that thread
-  static void executeSeqAfterWait(SendPort port) {
+  static void executeSeqProcess(SendPort port) {
     final stopwatch = Stopwatch();
     stopwatch.start();
 
